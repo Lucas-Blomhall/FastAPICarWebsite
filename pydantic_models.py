@@ -1,4 +1,6 @@
-# Pydantic
+# Pydantic,
+
+# är det Schema?
 from pydantic import BaseModel
 from typing import Optional
 # SQLCar class from database_model. SQL = SQLalchemy

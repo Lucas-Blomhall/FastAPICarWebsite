@@ -1,21 +1,128 @@
 from fastapi import Depends, FastAPI, HTTPException
+from fastapi.encoders import jsonable_encoder
 from sqlalchemy.orm import Session
 from database import get_db
 from pydantic_models import PydanticCar
 from database_models import SQLCar
+import database_models
+from database import engine
+
+
+database_models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
+
+# Routes
 
 @app.get("/")
 async def root():
     return {"message": "Hello World"}
 
 
+# Passed
+
+# endpoint: /cars and response model is list of PydanticCar
 @app.get("/cars", response_model=list[PydanticCar])
-def read_cars(db: Session = Depends(get_db)):
+async def read_cars(db: Session = Depends(get_db)):
     cars = db.query(SQLCar).all()
     return cars
+
+
+@app.get('/car/{car_id}', response_model=PydanticCar)
+async def read_car(car_id: int, db: Session = Depends(get_db)):
+    car = db.query(SQLCar).filter(SQLCar.id == car_id).first()
+    if car is None:
+        raise HTTPException(status_code=404, detail="Car not found")
+    return car
+
+
+@app.post("/cars", response_model=PydanticCar)
+async def create_car(car: PydanticCar, db: Session = Depends(get_db)):
+    new_car = SQLCar(**car.dict())
+    db.add(new_car)
+    db.commit()
+    db.refresh(new_car)
+    return new_car
+
+
+@app.put("/cars/{car_id}", response_model=PydanticCar)
+async def update_car(car_id: int, car_update: PydanticCar, db: Session = Depends(get_db)):
+    # Här fetchar vi från databasen
+    db_car = db.query(SQLCar).filter(SQLCar.id == car_id).first()
+    if db_car is None:
+        raise HTTPException(status_code=404, detail="Car not found")
+
+    # Update car attributes
+    for var, value in vars(car_update).items():
+        setattr(db_car, var, value) if value is not None else None
+
+    # Commit the changes
+    db.commit()
+    db.refresh(db_car)
+
+    return db_car
+
+
+@app.delete("/cars/{car_id}", response_model=PydanticCar)
+async def update_car(car_id: int, car_update: PydanticCar, db: Session = Depends(get_db)):
+    # Här fetchar vi från databasen
+    db_car = db.query(SQLCar).filter(SQLCar.id == car_id).first()
+    if db_car is None:
+        raise HTTPException(status_code=404, detail="Car not found")
+
+    # Update car attributes
+    for var, value in vars(car_update).items():
+        setattr(db_car, var, value) if value is not None else None
+
+    # Commit the changes
+    db.commit()
+    db.refresh(db_car)
+
+    return db_car
+
+
+# # update car
+
+# @app.patch("/cars/{car_id}", response_model=PydanticCar)
+# async def update_car(car_id: int, car: SQLCar, db: Session = Depends(get_db)):
+#     db_car = SQLCar.model_validate(car)
+#     db.add(db_car)
+#     db.commit()
+#     db.refresh(db_car)
+#     return db_car
+
+
+# @app.put("/cars/{car_id}", response_model=PydanticCar)
+# async def update_item(car_id: int, car: SQLCar):
+#     cars[car_id] = car
+#     return car
+
+
+# #first code from stackoverflow and tiangolo
+# @app.patch("/cars/{car_id}", response_model=PydanticCar)
+# async def update_car(car_id: int, car: SQLCar, db: Session = Depends(get_db)):
+#     db_car = SQLCar.model_validate(car)
+#     db.add(db_car)
+#     db.commit()
+#     db.refresh(db_car)
+#     return db_car
+
+    # extra code i saw on the internet
+    # update_car_encoded = jsonable_encoder(car)
+    # cars[car_id] = update_car_encoded
+    # return update_car_encoded
+
+
+# _car = SQLCar(car_name=car.car_name, price=car.price, year=car.year,
+#                   car_type=car.car_type, engine_type=car.engine_type)
+
+# @app.get("/cars", response_model=list[PydanticCar])
+# async def get_car_by_id(db: Session = Depends(get_db), car_id: int):
+#     return db.query(SQLCar).filter(SQLCar.id == car_id).first()
+
+
+# older code below
 
 
 # @app.get("/cars")
