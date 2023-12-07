@@ -1,5 +1,5 @@
 from fastapi import Depends, FastAPI, HTTPException
-from fastapi.encoders import jsonable_encoder
+# from fastapi.encoders import jsonable_encoder
 from sqlalchemy.orm import Session
 from database import get_db
 from pydantic_models import PydanticCar
@@ -37,7 +37,7 @@ async def read_car(car_id: int, db: Session = Depends(get_db)):
     return car
 
 
-@app.post("/cars", response_model=PydanticCar)
+@app.post("/car", response_model=PydanticCar)
 async def create_car(car: PydanticCar, db: Session = Depends(get_db)):
     new_car = SQLCar(**car.dict())
     db.add(new_car)
@@ -46,7 +46,7 @@ async def create_car(car: PydanticCar, db: Session = Depends(get_db)):
     return new_car
 
 
-@app.put("/cars/{car_id}", response_model=PydanticCar)
+@app.put("/car/{car_id}", response_model=PydanticCar)
 async def update_car(car_id: int, car_update: PydanticCar, db: Session = Depends(get_db)):
     # Här fetchar vi från databasen
     db_car = db.query(SQLCar).filter(SQLCar.id == car_id).first()
@@ -64,22 +64,16 @@ async def update_car(car_id: int, car_update: PydanticCar, db: Session = Depends
     return db_car
 
 
-@app.delete("/cars/{car_id}", response_model=PydanticCar)
-async def update_car(car_id: int, car_update: PydanticCar, db: Session = Depends(get_db)):
-    # Här fetchar vi från databasen
-    db_car = db.query(SQLCar).filter(SQLCar.id == car_id).first()
-    if db_car is None:
+# The response_model is set to dict as the operation does not return a Car model. Alternatively, you could set the status code to 204 and not return anything:
+# vi förväntar oss 204 för deleted
+@app.delete('/car/{car_id}', status_code=204)
+async def read_car(car_id: int, db: Session = Depends(get_db)):
+    car = db.query(SQLCar).filter(SQLCar.id == car_id).first()
+    if car is None:
         raise HTTPException(status_code=404, detail="Car not found")
-
-    # Update car attributes
-    for var, value in vars(car_update).items():
-        setattr(db_car, var, value) if value is not None else None
-
-    # Commit the changes
+    db.delete(car)
     db.commit()
-    db.refresh(db_car)
-
-    return db_car
+    return {"message": "Car deleted successfully"}
 
 
 # # update car
