@@ -1,4 +1,4 @@
-Car crud in Fast api!
+FastAPI RESTful car api 
 
 You can make a React folder and run "npx create-react-app" and then your app name maybe carapp for the frontend part.
 
